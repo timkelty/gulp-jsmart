@@ -10,9 +10,9 @@ require('jsmart');
 function compile(options, data, render) {
 	var tpl;
 	if (options.templatePath) {
-	  jSmart.prototype.getTemplate = function(name) {
-	  	return fs.readFileSync(path.join(options.templatePath, name)).toString();
-	  };
+		jSmart.prototype.getTemplate = function(name) {
+			return fs.readFileSync(path.join(options.templatePath, name)).toString();
+		};
 	}
 
 	return through.obj(function (file, enc, cb) {
@@ -39,49 +39,53 @@ function compile(options, data, render) {
 }
 
 function getTplData (data) {
-  var obj = {};
-  if (!data) { return obj; }
-  if (typeof data === 'object') { return data; }
-  if (typeof data === 'string') {
-  	fs.stat(data, function(err, stats) {
-  		if (stats.isDirectory()) {
-  			recurse(data, function (abspath, rootdir, subdir, filename) {
-  			  if(path.extname(filename) !== '.json') { return; }
-  			  var subObj = obj;
-  			  if(subdir) {
-  			    subdir.split(path.separator).forEach(function (item) {
-  			      item = _.camelCase(item);
-  			      subObj[item] = subObj[item] || {};
-  			      subObj = subObj[item];
-  			    });
-  			  }
-  			  subObj[_.camelCase(path.basename(filename, '.json'))] = require(abspath);
-  			});
+	var obj = {};
+	if (!data) { return obj; }
+	if (typeof data === 'object') { return data; }
+	if (typeof data === 'string') {
 
-  		} else if(stats.isFile()) {
-  			if(path.extname(data) === '.json') {
-  			  obj[_.camelCase(path.basename(data, '.json'))] = require(data);
-  			}
-  		}
-  	});
-  }
+		var stats = fs.statSync(data);
+		if (stats.isDirectory()) {
+			recurse(data, function (abspath, rootdir, subdir, filename) {
+				if(path.extname(filename) !== '.json') { return; }
+				var subObj = obj;
+				if(subdir) {
+					subdir.split(path.separator).forEach(function (item) {
+						item = _.camelCase(item);
+						subObj[item] = subObj[item] || {};
+						subObj = subObj[item];
+					});
+				}
+				subObj[_.camelCase(path.basename(filename, '.json'))] = require(abspath);
+			});
 
-  if (Object.keys(obj).length === 0) {
-  	this.emit('error', new gutil.PluginError('gulp-jsmart', 'Could not extract any JSON data.', {fileName: file.path}));
+		} else if(stats.isFile()) {
+
+			if(path.extname(data) === '.json') {
+				obj[_.camelCase(path.basename(data, '.json'))] = require(data);
+			}
+		}
+	}
+
+	if (Object.keys(obj).length === 0) {
+		var err = new gutil.PluginError({
+		  plugin: 'gulp-jsmart',
+		  message: 'Could not extract any JSON data.'
+		});
   }
   return obj;
 }
 
 function recurse(rootdir, callback, subdir) {
-  var abspath = subdir ? path.join(rootdir, subdir) : rootdir;
-  fs.readdirSync(abspath).forEach(function(filename) {
-    var filepath = path.join(abspath, filename);
-    if (fs.statSync(filepath).isDirectory()) {
-      recurse(rootdir, callback, path.join(subdir || '', filename || ''));
-    } else {
-      callback(filepath, rootdir, subdir, filename);
-    }
-  });
+	var abspath = subdir ? path.join(rootdir, subdir) : rootdir;
+	fs.readdirSync(abspath).forEach(function(filename) {
+		var filepath = path.join(abspath, filename);
+		if (fs.statSync(filepath).isDirectory()) {
+			recurse(rootdir, callback, path.join(subdir || '', filename || ''));
+		} else {
+			callback(filepath, rootdir, subdir, filename);
+		}
+	});
 };
 
 module.exports = function (data, options) {
