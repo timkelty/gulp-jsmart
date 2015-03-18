@@ -68,11 +68,11 @@ function getTplData (data) {
 	}
 
 	if (Object.keys(obj).length === 0) {
-		var err = new gutil.PluginError({
+		throw new gutil.PluginError({
 		  plugin: 'gulp-jsmart',
 		  message: 'Could not extract any JSON data.'
 		});
-  }
+  	}
   return obj;
 }
 
